@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aditya's Aadhaar API Hub</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d0d12;
+    color: #e6e6e6;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  #lockScreen {
+    position: fixed; inset: 0;
+    background: #0d0d12;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .lock-card {
+    background: #14141c; border: 1px solid #22222e;
+    border-radius: 16px; padding: 36px 30px;
+    width: 100%; max-width: 360px; text-align: center;
+  }
+  .lock-card h2 {
+    font-size: 1.4rem;
+    background: linear-gradient(90deg, #7c5cff, #22d3ee);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .lock-card p { color: #8a8a95; font-size: 0.85rem; margin-bottom: 20px; }
+  .lock-card input {
+    width: 100%; padding: 12px 14px;
+    background: #0a0a10; border: 1px solid #22222e;
+    border-radius: 8px; color: #e6e6e6;
+    font-size: 0.95rem; outline: none;
+    margin-bottom: 12px; text-align: center;
+    letter-spacing: 2px;
+  }
+  .lock-card input:focus { border-color: #7c5cff; }
+  .lock-card button {
+    width: 100%; padding: 12px;
+    background: linear-gradient(90deg, #7c5cff, #22d3ee);
+    color: #0d0d12; font-weight: 700;
+    border: none; border-radius: 8px;
+    font-size: 0.95rem; cursor: pointer;
+  }
+  #lockError { color: #ff5c7c; font-size: 0.82rem; margin-top: 10px; min-height: 16px; }
+
+  #mainContent { display: none; }
+
+  header {
+    text-align: center; padding: 40px 0 30px;
+    border-bottom: 1px solid #1f1f28;
+  }
+  header h1 {
+    font-size: 2.4rem;
+    background: linear-gradient(90deg, #7c5cff, #22d3ee);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  header p { color: #9a9aa5; font-size: 1rem; }
+  .badge {
+    display: inline-block; margin-top: 14px;
+    padding: 6px 14px; background: #16161f;
+    border: 1px solid #262633; border-radius: 999px;
+    font-size: 0.85rem; color: #b0b0bb;
+  }
+  .badge a { color: #22d3ee; text-decoration: none; }
+  .badge a:hover { text-decoration: underline; }
+
+  h2.section-title {
+    margin: 40px 0 18px; font-size: 1.3rem; color: #c9c9d4;
+    border-left: 3px solid #7c5cff; padding-left: 10px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    background: #14141c; border: 1px solid #22222e;
+    border-radius: 14px; padding: 22px;
+    transition: transform .15s ease, border-color .15s ease;
+  }
+  .card:hover { transform: translateY(-3px); border-color: #7c5cff; }
+  .card h3 { font-size: 1.1rem; color: #fff; margin-bottom: 8px; }
+  .card p { font-size: 0.9rem; color: #9a9aa5; line-height: 1.5; margin-bottom: 14px; }
+  .endpoint {
+    background: #0a0a10; border: 1px solid #1e1e28;
+    border-radius: 8px; padding: 10px 12px;
+    font-family: monospace; font-size: 0.82rem;
+    color: #22d3ee; word-break: break-all; margin-bottom: 14px;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .tag {
+    font-size: 0.72rem; padding: 3px 9px;
+    background: #1c1c28; border-radius: 999px; color: #b0b0bb;
+  }
+  .btn {
+    display: inline-block; padding: 9px 16px;
+    background: linear-gradient(90deg, #7c5cff, #22d3ee);
+    color: #0d0d12; font-weight: 600;
+    border-radius: 8px; text-decoration: none;
+    font-size: 0.85rem; border: none; cursor: pointer;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn-sm { padding: 7px 12px; font-size: 0.78rem; }
+
+  .plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .plan {
+    background: #14141c; border: 2px solid #22222e;
+    border-radius: 14px; padding: 22px;
+    text-align: center; cursor: pointer;
+    transition: all .2s ease; position: relative;
+  }
+  .plan:hover { border-color: #7c5cff; transform: translateY(-3px); }
+  .plan.selected {
+    border-color: #22d3ee;
+    box-shadow: 0 0 30px rgba(34,211,238,0.25);
+  }
+  .plan.selected::after {
+    content: '✓ SELECTED';
+    position: absolute; top: -10px; right: 12px;
+    background: #22d3ee; color: #0d0d12;
+    font-size: 0.65rem; font-weight: 700;
+    padding: 3px 8px; border-radius: 4px;
+  }
+  .plan h4 { color: #fff; margin-bottom: 6px; font-size: 1.05rem; }
+  .plan .price { font-size: 1.6rem; color: #22d3ee; margin: 10px 0; font-weight: 700; }
+  .plan ul { list-style: none; color: #9a9aa5; font-size: 0.85rem; line-height: 1.9; }
+  .plan.featured { border-color: #7c5cff; box-shadow: 0 0 30px rgba(124,92,255,0.15); }
+  .plan-btn {
+    margin-top: 14px; width: 100%; padding: 9px;
+    background: linear-gradient(90deg, #7c5cff, #22d3ee);
+    color: #0d0d12; font-weight: 600;
+    border: none; border-radius: 8px;
+    font-size: 0.82rem; cursor: pointer;
+  }
+  .plan-btn:hover { opacity: 0.9; }
+  .plan.contact .plan-btn { background: #262633; color: #b0b0bb; }
+
+  .key-box {
+    margin-top: 40px; background: #14141c;
+    border: 1px solid #22222e; border-radius: 14px; padding: 24px;
+  }
+  .key-box h3 { margin-bottom: 10px; color: #fff; }
+  .key-box p { color: #9a9aa5; font-size: 0.9rem; margin-bottom: 14px; }
+  .key-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .key-row input, .key-row select {
+    flex: 1; min-width: 180px;
+    padding: 11px 14px;
+    background: #0a0a10; border: 1px solid #22222e;
+    border-radius: 8px; color: #e6e6e6;
+    font-size: 0.9rem; outline: none;
+  }
+  .key-row input:focus, .key-row select:focus { border-color: #7c5cff; }
+
+  .result-block {
+    margin-top: 20px; background: #0a0a10;
+    border: 1px solid #1e1e28; border-radius: 10px;
+    padding: 16px; display: none;
+  }
+  .result-block label {
+    display: block; font-size: 0.78rem;
+    color: #8a8a95; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .result-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .result-row:last-child { margin-bottom: 0; }
+  .result-value {
+    flex: 1; font-family: monospace;
+    font-size: 0.85rem; color: #22d3ee;
+    word-break: break-all; background: #14141c;
+    border: 1px solid #1e1e28; border-radius: 6px; padding: 9px 12px;
+  }
+
+  .lookup-box {
+    margin-top: 40px; background: #14141c;
+    border: 1px solid #22222e; border-radius: 14px; padding: 24px;
+  }
+  .lookup-box h3 { margin-bottom: 10px; color: #fff; }
+  .lookup-box p { color: #9a9aa5; font-size: 0.9rem; margin-bottom: 14px; }
+  .lookup-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .lookup-row input {
+    flex: 1; min-width: 180px;
+    padding: 11px 14px;
+    background: #0a0a10; border: 1px solid #22222e;
+    border-radius: 8px; color: #e6e6e6;
+    font-size: 0.9rem; outline: none; font-family: monospace;
+  }
+  .lookup-row input:focus { border-color: #7c5cff; }
+  .lookup-result {
+    margin-top: 18px; background: #0a0a10;
+    border: 1px solid #1e1e28; border-radius: 10px;
+    padding: 16px; font-family: monospace;
+    font-size: 0.82rem; color: #22d3ee;
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 500px; overflow-y: auto; display: none;
+  }
+  .lookup-result.error { color: #ff5c7c; }
+
+  footer {
+    text-align: center; margin-top: 60px;
+    padding-top: 30px; border-top: 1px solid #1f1f28;
+    color: #6b6b78; font-size: 0.85rem;
+  }
+  footer a { color: #22d3ee; text-decoration: none; margin: 0 8px; }
+  footer a:hover { text-decoration: underline; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #14141c; border: 1px solid #22d3ee;
+    color: #22d3ee; padding: 12px 22px;
+    border-radius: 8px; font-size: 0.88rem;
+    opacity: 0; transition: all .3s ease; z-index: 10000;
+  }
+  #toast.show {
+    transform: translateX(-50%) translateY(0); opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div class="lock-card">
+    <h2>🔒 Arpit's Aadhaar API Hub</h2>
+    <p>Password daal bhai</p>
+    <input id="lockInput" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPass()" />
+    <button onclick="checkPass()">Unlock</button>
+    <div id="lockError"></div>
+  </div>
+</div>
+
+<div class="container" id="mainContent">
+  <header>
+    <h1>Arpit's Aadhaar API Hub</h1>
+    <p>Aadhaar info API — naam, pata, mobile, aur bahut kuch.</p>
+    <div class="badge">
+      Made by <strong>Arpit</strong> &nbsp;·&nbsp;
+      <a href="https://youtube.com/@soniyanainnain-d3c?si=1AUhXArXJ1oAVnWJ" target="_blank">YouTube — Genius Hacker</a> &nbsp;·&nbsp;
+      <a href="https://t.me/geniushackerfreetools" target="_blank">Telegram</a>
+    </div>
+  </header>
+
+  <h2 class="section-title">Available APIs</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>🆔 Aadhaar Info API</h3>
+      <p>Aadhaar number se naam, pita ka naam, pata, mobile, DOB aur bahut kuch.</p>
+      <div class="endpoint">GET /api/aadhaar?key=KEY&aadhaar=123412341234</div>
+      <div class="tags">
+        <span class="tag">Key Required</span>
+        <span class="tag">India</span>
+      </div>
+      <a class="btn" href="#" onclick="scrollToLookup(); return false;">Try It</a>
+    </div>
+  </div>
+
+  <h2 class="section-title">Plans</h2>
+  <div class="plans" id="plansGrid">
+    <div class="plan contact" data-plan="free" data-name="Free Trial">
+      <h4>Free Trial</h4>
+      <div class="price">₹0</div>
+      <ul>
+        <li>Limited calls</li>
+        <li>Basic API only</li>
+        <li>Key expires 24h</li>
+      </ul>
+      <button class="plan-btn" onclick="selectPlan(this)">Select Free</button>
+    </div>
+    <div class="plan featured contact" data-plan="2d" data-name="2-Day Pass">
+      <h4>2-Day Pass</h4>
+      <div class="price">Contact</div>
+      <ul>
+        <li>Unlimited calls</li>
+        <li>Full access</li>
+        <li>Key expires 48h</li>
+      </ul>
+      <button class="plan-btn" onclick="contactPlan('2-Day Pass')">Contact Admin</button>
+    </div>
+    <div class="plan contact" data-plan="3d" data-name="3-Day Pass">
+      <h4>3-Day Pass</h4>
+      <div class="price">Contact</div>
+      <ul>
+        <li>Unlimited calls</li>
+        <li>Full access</li>
+        <li>Key expires 72h</li>
+      </ul>
+      <button class="plan-btn" onclick="contactPlan('3-Day Pass')">Contact Admin</button>
+    </div>
+    <div class="plan contact" data-plan="life" data-name="Lifetime">
+      <h4>Lifetime</h4>
+      <div class="price">Contact</div>
+      <ul>
+        <li>Unlimited calls</li>
+        <li>Full access</li>
+        <li>Never expires</li>
+      </ul>
+      <button class="plan-btn" onclick="contactPlan('Lifetime')">Contact Admin</button>
+    </div>
+  </div>
+
+  <div class="key-box">
+    <h3>🔑 Generate Access Key</h3>
+    <p>Apna naam / telegram daal, plan choose kar, aur full endpoint copy kar ke share kar.</p>
+    <div class="key-row">
+      <input id="keyUser" placeholder="Your name / telegram username" />
+      <input id="keyAadhaar" placeholder="Demo Aadhaar (optional)" value="123412341234" maxlength="12" />
+      <select id="keyPlan">
+        <option value="1d">1 Day (Free Trial)</option>
+        <option value="2d">2 Days</option>
+        <option value="3d">3 Days</option>
+        <option value="life" selected>Lifetime</option>
+      </select>
+      <button class="btn" onclick="genKey()">Generate</button>
+    </div>
+
+    <div id="resultBlock" class="result-block">
+      <label>Your Key</label>
+      <div class="result-row">
+        <div class="result-value" id="outKey"></div>
+        <button class="btn btn-sm" onclick="copyText('outKey')">Copy</button>
+      </div>
+      <label>Full Endpoint (Ready to Share)</label>
+      <div class="result-row">
+        <div class="result-value" id="outUrl"></div>
+        <button class="btn btn-sm" onclick="copyText('outUrl')">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lookup-box" id="lookupBox">
+    <h3>🔍 Live Aadhaar Lookup</h3>
+    <p>Key aur Aadhaar number daal, live result dekh.</p>
+    <div class="lookup-row">
+      <input id="lookupKey" placeholder="API Key" value="ARPIT-LIFE-PERMAN-218CZ06C" />
+      <input id="lookupAadhaar" placeholder="12-digit Aadhaar" maxlength="12" />
+      <button class="btn" onclick="doLookup()">Lookup</button>
+    </div>
+    <div id="lookupResult" class="lookup-result"></div>
+  </div>
+
+  <footer>
+    © 2026 Arpit's Aadhaar API Hub &nbsp;·&nbsp;
+    <a href="https://youtube.com/@soniyanainnain-d3c?si=1AUhXArXJ1oAVnWJ" target="_blank">YouTube — Genius Hacker</a>
+    <a href="https://t.me/arpitff96" target="_blank">Telegram</a>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const PASSWORD = "itz_arpit_45k";
+const STORAGE_KEY = "arpit_hub_unlocked";
+const TELEGRAM = "https://t.me/qrpitff96";
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem(STORAGE_KEY) === "yes") unlock();
+  const lifePlan = document.querySelector('.plan[data-plan="life"]');
+  if (lifePlan) lifePlan.classList.add('selected');
+});
+
+function checkPass() {
+  const input = document.getElementById('lockInput').value;
+  const err = document.getElementById('lockError');
+  if (input === PASSWORD) {
+    sessionStorage.setItem(STORAGE_KEY, "yes");
+    unlock();
+  } else {
+    err.textContent = "❌ Galat password bhai";
+    document.getElementById('lockInput').value = "";
+  }
+}
+
+function unlock() {
+  document.getElementById('lockScreen').style.display = "none";
+  document.getElementById('mainContent').style.display = "block";
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function selectPlan(btn) {
+  document.querySelectorAll('.plan').forEach(p => p.classList.remove('selected'));
+  const plan = btn.closest('.plan');
+  plan.classList.add('selected');
+  const planValue = plan.getAttribute('data-plan');
+  const planName = plan.getAttribute('data-name');
+  document.getElementById('keyPlan').value = planValue;
+  showToast(`✅ ${planName} selected`);
+  document.querySelector('.key-box').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function contactPlan(planName) {
+  const msg = encodeURIComponent(`Hi Aditya, mujhe ${planName} chahiye Aadhaar API ke liye.`);
+  window.open(`${TELEGRAM}?text=${msg}`, '_blank');
+  showToast(`📩 Telegram pe contact kar — ${planName}`);
+}
+
+function genKey() {
+  const user = document.getElementById('keyUser').value.trim() || 'user';
+  const plan = document.getElementById('keyPlan').value;
+  const aadhaar = document.getElementById('keyAadhaar').value.trim() || '123412341234';
+
+  if (aadhaar.length !== 12 || !/^\d+$/.test(aadhaar)) {
+    showToast('❌ 12-digit Aadhaar daal');
+    return;
+  }
+
+  const rand = Math.random().toString(36).slice(2, 10).toUpperCase();
+  const prefix = plan === 'life' ? 'LIFE' : plan === '3d' ? 'D3' : plan === '2d' ? 'D2' : 'D1';
+  const key = `ADITYA-${prefix}-${user.slice(0,6).toUpperCase()}-${rand}`;
+
+  const fullUrl = `${window.location.origin}/api/aadhaar?key=${key}&aadhaar=${encodeURIComponent(aadhaar)}`;
+
+  document.getElementById('outKey').textContent = key;
+  document.getElementById('outUrl').textContent = fullUrl;
+  document.getElementById('resultBlock').style.display = 'block';
+  document.getElementById('lookupKey').value = key;
+  showToast('✅ Key generate ho gayi');
+}
+
+function copyText(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById(id);
+    const original = el.textContent;
+    el.textContent = '✅ Copied!';
+    setTimeout(() => { el.textContent = original; }, 1200);
+    showToast('📋 Copy ho gaya');
+  });
+}
+
+function scrollToLookup() {
+  document.getElementById('lookupBox').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function doLookup() {
+  const key = document.getElementById('lookupKey').value.trim();
+  const aadhaar = document.getElementById('lookupAadhaar').value.trim();
+  const box = document.getElementById('lookupResult');
+
+  if (!key) { showToast('❌ API key required'); return; }
+  if (!aadhaar || aadhaar.length !== 12 || !/^\d+$/.test(aadhaar)) {
+    showToast('❌ Valid 12-digit Aadhaar daal');
+    return;
+  }
+
+  box.style.display = 'block';
+  box.className = 'lookup-result';
+  box.textContent = '⏳ Fetching data...';
+
+  try {
+    const url = `/api/aadhaar?key=${encodeURIComponent(key)}&aadhaar=${encodeURIComponent(aadhaar)}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    box.textContent = JSON.stringify(data, null, 2);
+    if (data.status !== 'success') box.className = 'lookup-result error';
+  } catch (e) {
+    box.className = 'lookup-result error';
+    box.textContent = '❌ Error: ' + e.message;
+  }
+}
+</script>
+
+</body>
+</html>
