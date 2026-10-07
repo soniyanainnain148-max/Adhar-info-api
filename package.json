@@ -1,0 +1,8 @@
+{
+  "name": "arpit-aadhaar-api-hub",
+  "version": "1.0.0",
+  "description": "ARPIT AADHAAR INFO API HUB",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}
